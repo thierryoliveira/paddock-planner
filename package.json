@@ -1,0 +1,12 @@
+{
+  "name": "paddock-planner",
+  "version": "1.0.0",
+  "description": "Paddock and gauge planner for mount breeding in DOFUS 3.7",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "npx --yes serve ."
+  },
+  "engines": { "node": ">=18" }
+}

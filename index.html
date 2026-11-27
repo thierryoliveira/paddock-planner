@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paddock Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,700&display=swap" rel="stylesheet">
+<script type="application/json" id="initial-state">{"updated":"2026-11-27T12:00:00Z","slots":10,"fuel":{"serenityDown":15000,"serenityUp":2000,"endurance":20000,"maturity":59000,"love":59000,"xp":0},"mounts":[{"id":"F01","name":"Ginger","species":"Dragoturkey","sex":"F","generation":1,"level":55,"endurance":0,"maturity":0,"love":19000,"serenity":3800,"status":"fertile","notes":""},{"id":"F02","name":"Ginger","species":"Dragoturkey","sex":"F","generation":1,"level":1,"endurance":0,"maturity":0,"love":0,"serenity":-3000,"status":"fertile","notes":""},{"id":"F03","name":"Almond","species":"Dragoturkey","sex":"F","generation":1,"level":68,"endurance":20000,"maturity":0,"love":0,"serenity":-2400,"status":"fertile","notes":""},{"id":"F04","name":"Almond","species":"Dragoturkey","sex":"F","generation":1,"level":1,"endurance":0,"maturity":0,"love":0,"serenity":2000,"status":"fertile","notes":""},{"id":"F05","name":"Almond and Ginger","species":"Dragoturkey","sex":"F","generation":2,"level":50,"endurance":0,"maturity":0,"love":0,"serenity":2900,"status":"fertile","notes":""},{"id":"F06","name":"Purple and Ginger","species":"Dragoturkey","sex":"F","generation":6,"level":1,"endurance":0,"maturity":0,"love":0,"serenity":-2000,"status":"fertile","notes":"Bought for 38k"},{"id":"F07","name":"Golden","species":"Dragoturkey","sex":"F","generation":1,"level":55,"endurance":19000,"maturity":0,"love":0,"serenity":-3200,"status":"fertile","notes":""},{"id":"F08","name":"Golden","species":"Dragoturkey","sex":"M","generation":1,"level":1,"endurance":0,"maturity":0,"love":0,"serenity":2000,"status":"fertile","notes":""},{"id":"F09","name":"Ginger","species":"Dragoturkey","sex":"M","generation":1,"level":1,"endurance":0,"maturity":0,"love":0,"serenity":2300,"status":"fertile","notes":"Clone; confirm gauges and genealogy"},{"id":"E01","name":"Almond","species":"Dragoturkey","sex":"F","generation":1,"level":55,"endurance":0,"maturity":0,"love":0,"serenity":0,"status":"sterile","notes":""},{"id":"E02","name":"Golden","species":"Dragoturkey","sex":"M","generation":1,"level":55,"endurance":0,"maturity":0,"love":0,"serenity":0,"status":"sterile","notes":""}],"notes":""}</script>
+<style>
+/* VOICE: a breeder's working tool — practical, warm, game-world but disciplined.
+   IDEA: the paddock board at the Koalak breeders' village, with its gauges on the fence.
+   PICTURE: the paddock itself — 10 stalls showing each mount's serenity and gauges.
+   COLOUR and TYPE: meadow green field, dragoturkey orange accent, in-game gauge colours; Baloo 2 + Nunito Sans.
+   LAYOUT: "Now" paddock first, then schedule, stable editor, fuel, breeding, sterile mounts, data. */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0c1710);--ink:light-dark(#13261a,#e6f0e8);--muted:light-dark(#4f6656,#9fb5a6);--field:light-dark(#2f7d3b,#1d4d26);--field-2:light-dark(#3d9149,#245c2e);--card:light-dark(#f4f8f4,#132219);--line:light-dark(#d6e2d8,#2a3d30);--accent:#e8590c;--on-field:#fff}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Nunito Sans",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:"Baloo 2",system-ui,sans-serif;line-height:1.05;text-wrap:balance;margin:0 0 .4em}
+h1{font-size:clamp(30px,4vw,44px)}h2{font-size:28px}h3{font-size:19px}
+.band{padding:clamp(24px,4vw,56px) max(5vw,16px)}.wrap{max-width:1240px;margin:0 auto}
+.band.alt{background:var(--card)}
+.top{background:var(--field);color:var(--on-field)}.top .muted{color:#d7ecd9}
+.muted{color:var(--muted);font-size:14px}
+nav.scroll{display:flex;gap:6px;overflow-x:auto;padding:10px max(5vw,16px);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+nav a{flex:none;color:var(--ink);text-decoration:none;padding:8px 14px;border-radius:99px;border:1px solid var(--line);font-weight:700;font-size:14px}
+nav a:hover{border-color:var(--accent)}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.2fr);gap:28px;align-items:start;margin-top:18px}
+.big{font-family:"Baloo 2";font-size:clamp(40px,6vw,64px);line-height:1}
+.gauges{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.gauge-chip{background:rgba(0,0,0,.22);border-radius:12px;padding:10px 12px;flex:1 1 170px}
+.gauge-chip b{display:block}.meter{height:8px;border-radius:9px;background:rgba(255,255,255,.25);overflow:hidden;margin-top:6px}.meter i{display:block;height:100%}
+.paddock{background:var(--field-2);border:6px solid #8a5a2b;border-radius:18px;padding:12px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;box-shadow:inset 0 -14px 0 rgba(0,0,0,.12)}
+.stall{background:rgba(255,255,255,.93);color:#13261a;border-radius:12px;padding:8px;min-height:118px;font-size:13px}
+.stall.empty{background:rgba(255,255,255,.18);color:#d7ecd9;display:grid;place-items:center}
+.stall b{font-size:15px}.sex{float:right;font-weight:700}
+.serenity-bar{position:relative;height:10px;border-radius:9px;margin:6px 0;background:linear-gradient(90deg,#7b4bb7 0%,#c9b4e8 50%,#f2a7c3 100%)}
+.serenity-bar u{position:absolute;top:-3px;width:4px;height:16px;background:#13261a;border-radius:2px;text-decoration:none}
+.stats{display:grid;gap:3px}.stats span{display:block;height:6px;border-radius:6px;background:#e3e9e4;overflow:hidden}.stats span i{display:block;height:100%}
+.note{margin-top:14px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.band.alt .card{background:var(--bg)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+td.num,th.num{text-align:right;white-space:nowrap}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.editor td{padding:4px}.editor input{min-width:64px;padding:6px}.editor input.wide{min-width:120px}.editor select{min-width:64px}.editor select[data-field=status]{min-width:104px}
+button{font:inherit;font-weight:700;min-height:44px;padding:8px 16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:700;background:var(--line)}
+.tag.ok{background:#2f7d3b;color:#fff}.tag.warn{background:var(--accent);color:#fff}
+.step{display:grid;grid-template-columns:7em minmax(0,1fr);gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.step .when{font-family:"Baloo 2";font-size:22px;white-space:nowrap}
+.warn{color:var(--accent);font-weight:700}
+#status{font-size:14px}
+pre,.scroll{overflow-x:auto}
+@media(max-width:820px){.hero{grid-template-columns:minmax(0,1fr)}.paddock{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal}.stack td:empty{display:none}.step{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:no-preference){.stall{transition:transform .2s}.stall:hover{transform:translateY(-2px)}}
+</style><script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header class="band top"><div class="wrap">
+  <h1>Paddock Planner — DOFUS 3.7</h1>
+  <div class="muted">Rules from Dofus pour les Noobs (2026-10-13). Gauges give and burn 1–4 points per second depending on tier. Serenity gauges are assumed to move at the same rate (unverified): check in game.</div>
+  <div class="hero">
+    <div>
+      <div class="muted">Next check-in in</div>
+      <div class="big" id="next-check">—</div>
+      <div class="gauges" id="active-gauges"></div>
+      <div id="instructions" class="note"></div>
+    </div>
+    <div><div class="paddock" id="paddock"></div><div class="note" id="left-out"></div></div>
+  </div>
+</div></header>
+<nav class="scroll"><a href="#schedule">Schedule</a><a href="#stable">Stable</a><a href="#fuel">Fuel</a><a href="#breeding">Breeding</a><a href="#sterile">Sterile</a><a href="#data">Data</a></nav>
+
+<section class="band" id="schedule"><div class="wrap">
+  <h2>Schedule for the next hours</h2>
+  <p class="muted">Each step re-picks the best gauge pair and mounts. A step ends when a gauge stops helping, output drops by half or fuel runs out. When you check in, update the stable: the schedule recalculates itself.</p>
+  <div id="steps"></div>
+  <h3 style="margin-top:20px">Events in the current step</h3>
+  <div class="scroll"><table class="stack"><thead><tr><th>When</th><th>Event</th></tr></thead><tbody id="events"></tbody></table></div>
+</div></section>
+
+<section class="band alt" id="stable"><div class="wrap">
+  <h2>Stable</h2>
+  <p class="muted">Endurance, Maturity and Love go up to 20,000; Serenity ranges from −5,000 to +5,000. A mount is fecund when all three are at 20,000.</p>
+  <div class="scroll"><table class="editor"><thead><tr><th>ID</th><th>Name</th><th>Sex</th><th>Gen.</th><th>Level</th><th>Endur.</th><th>Matur.</th><th>Love</th><th>Seren.</th><th>Status</th><th>Notes</th><th></th></tr></thead><tbody id="mount-rows"></tbody></table></div>
+  <div class="row" style="margin-top:12px"><button id="add-mount">+ Mount</button></div>
+</div></section>
+
+<section class="band" id="fuel"><div class="wrap">
+  <h2>Fuel and paddock</h2>
+  <div class="grid2">
+    <div class="card"><h3>Fuel loaded</h3><div id="fuel-editor"></div>
+      <label class="muted" style="display:block;margin-top:10px">Paddock slots <input id="slots" type="number" min="1" max="60"></label></div>
+    <div class="card"><h3>Fuel needed (minimum, if all mounts share the paddock)</h3><p class="muted">Fuel serves every mount at once, so each gauge needs as much as the neediest mount.</p><div class="scroll"><table><thead><tr><th>Gauge</th><th class="num">Loaded</th><th class="num">Needed</th><th></th></tr></thead><tbody id="fuel-needed"></tbody></table></div></div>
+  </div>
+</div></section>
+
+<section class="band alt" id="breeding"><div class="wrap">
+  <h2>Breeding</h2>
+  <p class="muted">Target chance = 30% ÷ number of targets + 0.15% × (sire level + dam level) + 20% with Optimakina. Take targets from the in-game Genetics interface and prices from the lowest listing or an observed sale.</p>
+  <div class="grid2">
+    <div class="card"><h3>Fecund pairs</h3><div id="fecund-pairs"></div></div>
+    <div class="card"><h3>Expected value</h3>
+      <label>Pair <select id="ev-pair"></select></label>
+      <div class="grid2" style="gap:8px;margin-top:8px">
+        <label>Number of targets <input id="ev-targets" type="number" min="1" value="1"></label>
+        <label>Target price <input id="ev-target-price" type="number" value="100000"></label>
+        <label>Price if it misses <input id="ev-fallback-price" type="number" value="8000"></label>
+        <label>Value of both parents (fecund) <input id="ev-parents" type="number" value="16000"></label>
+        <label>Fuel spent <input id="ev-fuel" type="number" value="0"></label>
+        <label>Optimakina cost (0 = none) <input id="ev-makina" type="number" value="0"></label>
+      </div>
+      <div id="ev-result" style="margin-top:12px"></div></div>
+  </div>
+</div></section>
+
+<section class="band" id="sterile"><div class="wrap">
+  <h2>Sterile mounts: clone or extract</h2>
+  <div id="sterile-advice"></div>
+</div></section>
+
+<section class="band alt" id="data"><div class="wrap">
+  <h2>Data</h2>
+  <p class="muted">Changes are saved automatically in this browser. Download a backup now and then, or to move to another device.</p>
+  <div class="row"><button class="primary" id="download">Download backup (.json)</button><label class="row" style="gap:6px"><span>Load backup</span><input type="file" id="upload" accept="application/json,.json" style="width:auto"></label><button id="copy">Copy JSON</button><button id="reset">Reset to initial data</button><span id="status"></span></div>
+  <label style="display:block;margin-top:14px">Notes<textarea id="notes" rows="3"></textarea></label>
+  <details style="margin-top:14px"><summary>Paste JSON</summary><textarea id="paste" rows="6" placeholder="Paste exported JSON here"></textarea><div class="row" style="margin-top:8px"><button id="import">Import</button></div></details>
+</div></section>
+
+<script src="planner.js"></script>
+<script>
+{
+const P = window.Planner;
+const { GAUGES, GAUGE_BY_KEY, STAT_MAX } = P;
+const STORAGE_KEY = 'paddock-planner-state';
+const STAT_KEYS = ['endurance', 'maturity', 'love'];
+const STAT_LABELS = { endurance: 'Endurance', maturity: 'Maturity', love: 'Love' };
+const STAT_COLORS = { endurance: '#d9a400', maturity: '#2b7bd6', love: '#d6336c' };
+const NUMERIC_FIELDS = ['generation', 'level', 'endurance', 'maturity', 'love', 'serenity'];
+const FIELDS = ['id', 'name', 'sex', 'generation', 'level', 'endurance', 'maturity', 'love', 'serenity', 'status', 'notes'];
+const STATUSES = ['fertile', 'sterile', 'senile'];
+
+const INITIAL = P.migrateState(JSON.parse(document.getElementById('initial-state').textContent));
+const clone = (o) => JSON.parse(JSON.stringify(o));
+let state = clone(INITIAL);
+try {
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+  if (saved) state = P.migrateState(saved);
+} catch (e) { /* keep initial state */ }
+
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n) => Math.round(n).toLocaleString('en-US');
+const duration = (s) => { const m = Math.round(s / 60), h = Math.floor(m / 60); return h ? `${h}h${String(m % 60).padStart(2, '0')}` : `${m} min`; };
+const percent = (v) => Math.max(0, Math.min(100, (v / STAT_MAX) * 100));
+const gaugeNames = (combo) => combo.map((k) => esc(GAUGE_BY_KEY[k].name)).join(' + ');
+
+function setStatus(text, warn) { const el = $('status'); el.textContent = text; el.className = warn ? 'warn' : ''; }
+function persist() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); return true; } catch (e) { return false; } }
+function commit() {
+  state.updated = new Date().toISOString();
+  const ok = persist();
+  setStatus(ok ? 'Saved in this browser' : 'This browser cannot save: download a backup', !ok);
+  render();
+}
+function replaceState(next, message) { state = P.migrateState(next); commit(); renderStable(); setStatus(message); }
+
+function renderNow() {
+  const steps = P.plan(state, 6), current = steps[0];
+  if (!current) {
+    $('next-check').textContent = '—';
+    $('active-gauges').innerHTML = ''; $('paddock').innerHTML = ''; $('left-out').textContent = '';
+    $('instructions').textContent = state.mounts.some(P.needsGauges)
+      ? 'No fueled gauge helps your mounts. See the Fuel section.'
+      : 'No fertile mount needs gauges. Time to breed!';
+    $('steps').innerHTML = ''; $('events').innerHTML = '';
+    return;
+  }
+  $('next-check').textContent = duration(current.duration);
+  $('active-gauges').innerHTML = current.combo.map((k) => {
+    const g = GAUGE_BY_KEY[k], f = state.fuel[k];
+    return `<div class="gauge-chip"><b>${esc(g.name)}</b><span class="muted">${esc(g.game)} · tier ${P.tier(f)} · ${fmt(f)}</span><div class="meter"><i style="width:${f / 2000}%;background:${g.color}"></i></div></div>`;
+  }).join('');
+
+  const placed = current.mountIds.map((id) => state.mounts.find((m) => m.id === id));
+  const stalls = [];
+  for (let i = 0; i < state.slots; i++) {
+    const m = placed[i];
+    if (!m) { stalls.push('<div class="stall empty">empty slot</div>'); continue; }
+    const pos = (m.serenity + 5000) / 100;
+    stalls.push(`<div class="stall"><span class="sex">${m.sex === 'M' ? '♂' : '♀'}</span><b>${esc(m.id)}</b><div>${esc(m.name)} G${m.generation}</div>
+      <div class="serenity-bar" title="Serenity ${m.serenity}"><u style="left:calc(${pos}% - 2px)"></u></div>
+      <div class="stats">${STAT_KEYS.map((s) => `<span title="${STAT_LABELS[s]} ${fmt(m[s])}"><i style="width:${percent(m[s])}%;background:${STAT_COLORS[s]}"></i></span>`).join('')}</div></div>`);
+  }
+  $('paddock').innerHTML = stalls.join('');
+
+  const leftOut = state.mounts.filter((m) => P.needsGauges(m) && !current.mountIds.includes(m.id));
+  $('left-out').textContent = leftOut.length ? `Keep out for now (they do not benefit from this pair): ${leftOut.map((m) => m.id).join(', ')}` : '';
+  $('instructions').innerHTML = `Put <b>${current.mountIds.map(esc).join(', ')}</b> in the paddock and turn on <b>${gaugeNames(current.combo)}</b>.`;
+  $('steps').innerHTML = steps.map((s, i) => `<div class="step"><div class="when">${i ? '+' + duration(s.at) : 'Now'}</div><div><b>${gaugeNames(s.combo)}</b> for about ${duration(s.duration)}<div class="muted">Paddock: ${s.mountIds.map(esc).join(', ')}</div></div></div>`).join('');
+  $('events').innerHTML = current.events.length
+    ? current.events.map((e) => `<tr><td class="num">${duration(e.t)}</td><td>${esc(e.text)}</td></tr>`).join('')
+    : '<tr><td colspan="2">No events in the next 12 hours.</td></tr>';
+}
+
+function renderStable() {
+  $('mount-rows').innerHTML = state.mounts.map((m, i) => `<tr>${FIELDS.map((f) => {
+    if (f === 'sex') return `<td><select data-index="${i}" data-field="sex">${['F', 'M'].map((o) => `<option${m.sex === o ? ' selected' : ''}>${o}</option>`).join('')}</select></td>`;
+    if (f === 'status') return `<td><select data-index="${i}" data-field="status">${STATUSES.map((o) => `<option value="${o}"${m.status === o ? ' selected' : ''}>${o[0].toUpperCase() + o.slice(1)}</option>`).join('')}</select>${m.status === 'fertile' && P.isFecund(m) ? ' <span class="tag ok">Fecund</span>' : ''}</td>`;
+    const numeric = NUMERIC_FIELDS.includes(f);
+    return `<td><input data-index="${i}" data-field="${f}" ${numeric ? 'type="number"' : 'class="wide"'} value="${esc(m[f])}"></td>`;
+  }).join('')}<td><button data-remove="${i}" aria-label="Remove ${esc(m.id)}">✕</button></td></tr>`).join('');
+}
+
+function renderFuel() {
+  $('fuel-editor').innerHTML = GAUGES.map((g) => `<label style="display:block;margin:6px 0">${esc(g.name)} <span class="muted">(${g.game}) · tier ${P.tier(state.fuel[g.key])}</span><input type="number" min="0" max="200000" data-fuel="${g.key}" value="${state.fuel[g.key]}"></label>`).join('');
+  $('slots').value = state.slots;
+  const need = P.fuelNeeded(state);
+  $('fuel-needed').innerHTML = GAUGES.filter((g) => g.key !== 'xp').map((g) => {
+    const have = state.fuel[g.key], n = need[g.key];
+    const tag = n === 0 ? '' : have >= n ? '<span class="tag ok">ok</span>' : `<span class="tag warn">${fmt(n - have)} short</span>`;
+    return `<tr><td>${esc(g.name)}</td><td class="num">${fmt(have)}</td><td class="num">${fmt(n)}</td><td>${tag}</td></tr>`;
+  }).join('');
+}
+
+const sameSpecies = (a, b) => (a.species || '') === (b.species || '');
+function renderBreeding() {
+  const fecund = state.mounts.filter((m) => m.status === 'fertile' && P.isFecund(m));
+  const pairs = [];
+  for (const sire of fecund) for (const dam of fecund) if (sire.sex === 'M' && dam.sex === 'F' && sameSpecies(sire, dam)) pairs.push([sire, dam]);
+  $('fecund-pairs').innerHTML = pairs.length
+    ? `<table class="stack"><thead><tr><th>Sire</th><th>Dam</th><th class="num">Chance, 1 target</th></tr></thead><tbody>${pairs.map(([s, d]) => `<tr><td>${esc(s.id)} ${esc(s.name)} G${s.generation} lvl ${s.level}</td><td>${esc(d.id)} ${esc(d.name)} G${d.generation} lvl ${d.level}</td><td class="num">${(P.targetChance(s.level, d.level, 1, false) * 100).toFixed(1)}%</td></tr>`).join('')}</tbody></table>`
+    : '<p class="muted">No fecund pairs yet. The calculator accepts any fertile pair so you can plan ahead.</p>';
+
+  const fertile = state.mounts.filter((m) => m.status === 'fertile');
+  const current = $('ev-pair').value, options = [];
+  for (const s of fertile) for (const d of fertile) {
+    if (s.sex === 'M' && d.sex === 'F' && sameSpecies(s, d)) {
+      options.push(`<option value="${esc(s.id)}|${esc(d.id)}">${esc(s.id)} × ${esc(d.id)} (${esc(s.name)} × ${esc(d.name)})${P.isFecund(s) && P.isFecund(d) ? ' ✓' : ''}</option>`);
+    }
+  }
+  $('ev-pair').innerHTML = options.join('');
+  if (current) $('ev-pair').value = current;
+  renderExpectedValue();
+}
+
+function renderExpectedValue() {
+  const value = $('ev-pair').value;
+  if (!value) { $('ev-result').textContent = ''; return; }
+  const [sireId, damId] = value.split('|');
+  const sire = state.mounts.find((m) => m.id === sireId), dam = state.mounts.find((m) => m.id === damId);
+  if (!sire || !dam) return;
+  const num = (id) => +$(id).value || 0;
+  const targets = num('ev-targets') || 1, makinaCost = num('ev-makina');
+  const base = { targetPrice: num('ev-target-price'), fallbackPrice: num('ev-fallback-price'), parentsValue: num('ev-parents'), fuelCost: num('ev-fuel') };
+  const chance = P.targetChance(sire.level, dam.level, targets, false);
+  const chanceMakina = P.targetChance(sire.level, dam.level, targets, true);
+  const ev = P.breedingExpectedValue({ ...base, chance });
+  const evMakina = P.breedingExpectedValue({ ...base, chance: chanceMakina, makinaCost });
+  const best = makinaCost > 0 ? Math.max(ev, evMakina) : ev;
+  const useMakina = makinaCost > 0 && evMakina > ev;
+  const ready = P.isFecund(sire) && P.isFecund(dam);
+  $('ev-result').innerHTML = `<table><tbody>
+    <tr><td>Target chance, no Makina</td><td class="num">${(chance * 100).toFixed(1)}%</td></tr>
+    <tr><td>Expected value, no Makina</td><td class="num">${fmt(ev)}</td></tr>
+    ${makinaCost > 0 ? `<tr><td>Target chance with Optimakina</td><td class="num">${(chanceMakina * 100).toFixed(1)}%</td></tr><tr><td>Expected value with Optimakina</td><td class="num">${fmt(evMakina)}</td></tr>` : ''}
+    </tbody></table>
+    <p class="${best > 0 ? '' : 'warn'}">${best > 0 ? `Positive expected value${useMakina ? ', using the Optimakina' : ''}. Confirm the target in the Genetics interface first.` : 'Negative expected value: sell the parents or pick another pair.'}${ready ? '' : ' (Parents are not fecund yet.)'}</p>`;
+}
+
+function renderSterile() {
+  const sterile = state.mounts.filter((m) => m.status === 'sterile'), used = new Set(), items = [];
+  for (const a of sterile) for (const b of sterile) {
+    if (a !== b && !used.has(a.id) && !used.has(b.id) && a.generation === b.generation && sameSpecies(a, b)) {
+      used.add(a.id); used.add(b.id);
+      items.push(`<li><b>Clone ${esc(a.id)} + ${esc(b.id)}</b> (G${a.generation}) into 1 fertile mount. Keeps sex, genealogy and serenity; resets endurance, maturity and love.</li>`);
+    }
+  }
+  for (const m of sterile) {
+    if (used.has(m.id)) continue;
+    items.push(m.generation > 1
+      ? `<li><b>${esc(m.id)}</b>: no cloning partner. Extraction yields ${m.generation} resource(s); compare with its sale price.</li>`
+      : `<li><b>${esc(m.id)}</b>: Gen 1 cannot be extracted. Keep it until you have another sterile Gen 1 to clone with.</li>`);
+  }
+  $('sterile-advice').innerHTML = items.length ? `<ul>${items.join('')}</ul>` : '<p class="muted">No sterile mounts.</p>';
+}
+
+function render() { renderNow(); renderFuel(); renderBreeding(); renderSterile(); $('notes').value = state.notes || ''; }
+
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.dataset.field) {
+    const m = state.mounts[+t.dataset.index], f = t.dataset.field;
+    m[f] = NUMERIC_FIELDS.includes(f) ? (+t.value || 0) : t.value;
+    if (STAT_KEYS.includes(f)) m[f] = Math.max(0, Math.min(STAT_MAX, m[f]));
+    if (f === 'serenity') m.serenity = Math.max(P.SERENITY_MIN, Math.min(P.SERENITY_MAX, m.serenity));
+    commit(); renderStable();
+  } else if (t.dataset.fuel) {
+    state.fuel[t.dataset.fuel] = Math.max(0, Math.min(200000, +t.value || 0)); commit();
+  } else if (t.id === 'slots') {
+    state.slots = Math.max(1, +t.value || 10); commit();
+  } else if (t.id === 'notes') {
+    state.notes = t.value; commit();
+  } else if (t.id === 'ev-pair') {
+    renderExpectedValue();
+  }
+});
+document.addEventListener('input', (e) => { if (e.target.id && e.target.id.startsWith('ev-') && e.target.id !== 'ev-pair') renderExpectedValue(); });
+document.addEventListener('click', (e) => {
+  const t = e.target;
+  if (t.dataset.remove !== undefined) { state.mounts.splice(+t.dataset.remove, 1); commit(); renderStable(); }
+});
+
+$('add-mount').onclick = () => {
+  const n = state.mounts.length + 1;
+  state.mounts.push({ id: 'N' + String(n).padStart(2, '0'), name: '', species: 'Dragoturkey', sex: 'F', generation: 1, level: 1, endurance: 0, maturity: 0, love: 0, serenity: 0, status: 'fertile', notes: '' });
+  commit(); renderStable();
+};
+$('copy').onclick = async () => {
+  try { await navigator.clipboard.writeText(JSON.stringify(state, null, 1)); setStatus('JSON copied'); }
+  catch (e) { setStatus('Could not copy; select and copy manually', true); }
+};
+$('import').onclick = () => {
+  try { replaceState(JSON.parse($('paste').value), 'Imported and saved'); }
+  catch (e) { setStatus('Invalid JSON', true); }
+};
+$('download').onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `paddock-planner-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  setStatus('Backup downloaded');
+};
+$('upload').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try { replaceState(JSON.parse(await file.text()), 'Backup loaded and saved'); }
+  catch (err) { setStatus('Invalid backup file', true); }
+  e.target.value = '';
+};
+$('reset').onclick = () => {
+  const btn = $('reset');
+  if (btn.dataset.confirm !== '1') {
+    btn.dataset.confirm = '1';
+    btn.textContent = 'Confirm? This erases data in this browser';
+    setTimeout(() => { btn.dataset.confirm = ''; btn.textContent = 'Reset to initial data'; }, 4000);
+    return;
+  }
+  btn.dataset.confirm = ''; btn.textContent = 'Reset to initial data';
+  replaceState(clone(INITIAL), 'Initial data restored');
+};
+
+renderStable();
+render();
+}
+</script>
+</body>
+</html>
